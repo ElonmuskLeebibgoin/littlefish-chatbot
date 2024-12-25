@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #4285F4;
+  --secondary-color: #FFFFFF;
+  --background-color: #F8F9FA;
+  --accent-color: #FF9800;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --hover-primary: #1A73E8;
+  --hover-accent: #E65100;
+  --input-background: #F1F3F4;
+  --border-color: #DADCE0;
+  --icon-color: #757575;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-[var(--background-color)] text-[var(--text-primary)] font-roboto antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-[var(--text-primary)] tracking-tight;
+  }
+
+  /* 响应式字体大小 */
+  h1 { @apply text-3xl sm:text-4xl md:text-5xl; }
+  h2 { @apply text-2xl sm:text-3xl md:text-4xl; }
+  h3 { @apply text-xl sm:text-2xl md:text-3xl; }
+  h4 { @apply text-lg sm:text-xl md:text-2xl; }
+
+  /* 移动设备上的触摸优化 */
+  @media (max-width: 640px) {
+    button, a {
+      @apply min-h-[44px] min-w-[44px];
+    }
+  }
+}
+
+@layer components {
+  .nav-link {
+    @apply text-base px-4 py-2 hover:text-[var(--hover-primary)] transition-colors duration-300
+           relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5
+           after:bg-[var(--primary-color)] after:scale-x-0 hover:after:scale-x-100
+           after:transition-transform after:duration-300;
+  }
+
+  .btn-primary {
+    @apply bg-[var(--accent-color)] text-white px-6 py-2 rounded-lg 
+           hover:bg-[var(--hover-accent)] transition-all duration-300
+           shadow-sm hover:shadow-md active:shadow-sm
+           transform active:scale-95;
+  }
+
+  .search-input {
+    @apply bg-[var(--input-background)] border border-[var(--border-color)] 
+           focus:border-[var(--primary-color)] rounded-lg px-4 py-2 w-[200px]
+           transition-all duration-300 focus:w-[300px]
+           focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)];
+  }
+
+  .chat-bubble {
+    @apply max-w-[70%] rounded-2xl px-4 py-2 mb-2 shadow-sm
+           break-words whitespace-pre-wrap;
+  }
+
+  .chat-bubble-user {
+    @apply bg-[var(--primary-color)] text-white self-end
+           rounded-tr-none;
+  }
+
+  .chat-bubble-ai {
+    @apply bg-[var(--input-background)] text-[var(--text-primary)] self-start
+           rounded-tl-none;
+  }
+
+  /* 响应式容器 */
+  .container {
+    @apply px-4 sm:px-6 lg:px-8 mx-auto;
+    max-width: min(100%, 1200px);
+  }
+
+  /* 响应式卡片 */
+  .card {
+    @apply bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300
+           p-4 sm:p-6 md:p-8;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+/* 滚动条美化 */
+@media (min-width: 640px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--background-color);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 640px) {
+  .chat-bubble {
+    @apply max-w-[85%] text-sm;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 text-sm;
+  }
+
+  .nav-link {
+    @apply text-sm px-2;
+  }
+}
+
+@layer utilities {
+  .grid-container {
+    @apply container mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6;
+  }
+
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
