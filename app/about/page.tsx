@@ -37,26 +37,21 @@ export default function About() {
   return (
     <div className="min-h-screen pt-[60px]">
       {/* Hero Section */}
-      <div className="relative h-[400px] w-full">
+      <div className="relative h-[600px] w-full bg-white">
         <Image
           src="/images/about_bg.jpg"
           alt="关于我的封面图"
           fill
-          className="object-cover brightness-100"
+          className="object-contain"
           priority
         />
-      </div>
-
-      {/* Introduction */}
-      <section className="py-12 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-xl text-[var(--text-secondary)] leading-relaxed">
-              一个热爱创造和创新的开发者。始终保持学习的热情，乐于与他人分享知识。致力于构建能够产生影响力的有意义项目。
-            </p>
-          </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+          <h1 className="text-3xl font-bold mb-6">一个热爱创造和创新的开发者</h1>
+          <p className="text-lg max-w-2xl mx-auto">
+            始终保持学习的热情，乐于与他人分享知识，致力于构建能够产生影响力的有意义项目。
+          </p>
         </div>
-      </section>
+      </div>
 
       {/* Personality Traits */}
       <section className="py-16 bg-gray-50">
@@ -71,7 +66,7 @@ export default function About() {
                   <span className="ml-auto text-lg font-medium">{trait.value}%</span>
                 </div>
                 <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-[var(--primary-color)] rounded-full transition-all duration-1000"
                     style={{ width: `${trait.value}%` }}
                   />

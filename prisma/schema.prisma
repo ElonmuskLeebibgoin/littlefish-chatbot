@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户模型
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  name          String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // 关联
+  profile       Profile?
+  mbtiResults   MBTIResult[]
+  chatHistory   ChatMessage[]
+  payments      Payment[]
+}
+
+// 用户档案
+model Profile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  bio         String?   @db.Text
+  location    String?
+  website     String?
+  interests   String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // 关联
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// MBTI 测试结果
+model MBTIResult {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String    // MBTI 类型 (e.g., "INTJ")
+  answers     Json      // 存储答案详情
+  dimensions  Json      // 存储维度分数
+  createdAt   DateTime  @default(now())
+
+  // 关联
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// 聊天记录
+model ChatMessage {
+  id          String    @id @default(cuid())
+  userId      String
+  role        String    // "user" 或 "assistant"
+  content     String    @db.Text
+  createdAt   DateTime  @default(now())
+
+  // 关联
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// 支付记录
+model Payment {
+  id          String    @id @default(cuid())
+  userId      String
+  amount      Float
+  status      String    // "pending", "completed", "failed"
+  type        String    // "mbti_test", "subscription", etc.
+  orderId     String    @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // 关联
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+} 

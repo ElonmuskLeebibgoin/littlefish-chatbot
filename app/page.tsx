@@ -18,8 +18,8 @@ export default function Home() {
   return (
     <div className="space-y-16 pt-[60px]">
       {/* Hero Section */}
-      <div 
-        className="relative min-h-[600px] w-full overflow-hidden cursor-pointer bg-black"
+      <div
+        className="relative min-h-[600px] w-full overflow-hidden cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -29,18 +29,23 @@ export default function Home() {
               src="/images/hero-1.jpg"
               alt="World of AI"
               fill
-              className="object-contain transform transition-transform duration-700 hover:scale-105"
+              className="object-contain transform transition-all duration-700 hover:scale-105 brightness-100"
               priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+              quality={85}
+              loading="eager"
             />
           </div>
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50 flex items-center justify-center">
+        <div className={`absolute inset-0 transition-opacity duration-500 ${isHovered
+          ? 'bg-gradient-to-b from-black/60 via-black/40 to-black/60 opacity-100'
+          : 'bg-gradient-to-b from-black/30 via-black/20 to-black/30 opacity-100'
+          } flex items-center justify-center`}>
           <div className="text-center text-white max-w-4xl px-4">
-            <div className={`transform transition-all duration-700 ${
-              isHovered 
-                ? 'translate-y-0 opacity-100' 
-                : 'translate-y-10 opacity-0'
-            }`}>
+            <div className={`transform transition-all duration-700 ${isHovered
+              ? 'translate-y-0 opacity-100'
+              : 'translate-y-10 opacity-0'
+              }`}>
               <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight text-white">
                 探索 AI 的无限世界
               </h1>
@@ -48,14 +53,14 @@ export default function Home() {
                 开发者 • 创造者 • 梦想家
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link 
-                  href="/about" 
+                <Link
+                  href="/about"
                   className="btn-primary bg-white/10 backdrop-blur-sm hover:bg-white/20 inline-flex items-center space-x-2 text-lg"
                 >
                   了解更多
                 </Link>
-                <Link 
-                  href="/chat" 
+                <Link
+                  href="/chat"
                   className="btn-primary inline-flex items-center space-x-2 text-lg"
                 >
                   <MessageCircle className="w-5 h-5" />
@@ -66,9 +71,8 @@ export default function Home() {
           </div>
         </div>
         {/* 提示文字 */}
-        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 text-white/80 text-sm transform transition-all duration-500 ${
-          isHovered ? 'opacity-0' : 'opacity-100'
-        }`}>
+        <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 text-white/80 text-sm transform transition-all duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'
+          }`}>
           <div className="flex flex-col items-center space-y-2">
             <span className="animate-bounce">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,6 +93,9 @@ export default function Home() {
               alt="LittleFish 头像"
               fill
               className="rounded-full object-cover"
+              sizes="(max-width: 768px) 120px, 192px"
+              quality={90}
+              loading="eager"
             />
           </div>
           <div className="flex-grow">
@@ -98,8 +105,8 @@ export default function Home() {
               通过这个网站，我想分享我的经历，并与志同道合的人建立联系。
               欢迎使用我的 AI 助手了解更多关于我的信息！
             </p>
-            <Link 
-              href="/about" 
+            <Link
+              href="/about"
               className="text-[var(--primary-color)] hover:text-[var(--hover-primary)] font-medium"
             >
               了解更多 →
@@ -113,7 +120,7 @@ export default function Home() {
         <h2 className="text-3xl font-bold mb-8 text-center">我的兴趣爱好</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {interests.map((interest, index) => (
-            <div 
+            <div
               key={index}
               className="bg-white rounded-lg p-6 text-center hover:shadow-lg transition-shadow duration-300"
             >
@@ -137,8 +144,8 @@ export default function Home() {
               想了解我更多吗？或者有什么技术问题想讨论？
               点击下方按钮，我们可以开始一场有趣的对话~
             </p>
-            <Link 
-              href="/chat" 
+            <Link
+              href="/chat"
               className="inline-flex items-center space-x-2 bg-white text-[var(--primary-color)] px-6 py-3 rounded-lg hover:bg-opacity-90 transition-colors duration-300"
             >
               <MessageCircle className="w-5 h-5" />

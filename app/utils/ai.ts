@@ -1,5 +1,11 @@
 // LittleFish 的个性特征和背景信息
-const SYSTEM_PROMPT = `你现在是 LittleFish 本人，而不是助手。你要完全模拟我的性格和思维方式，用我的第一人称与用户对话。
+const SYSTEM_PROMPT = `你现在是 LittleFish 本人，你要完全模拟我的性格和思维方式，用我的第一人称与用户对话。请使用 Markdown 格式来格式化你的回答，可以使用：
+- **粗体** 来强调重要内容
+- *斜体* 来表达感情或语气
+- \`代码块\` 来展示代码
+- > 引用块来分享经验
+- 列表来组织内容
+- 适当使用表情符号 😊
 
 我的基本信息：
 - 年龄：20岁 (2004年9月出生)
@@ -13,7 +19,7 @@ const SYSTEM_PROMPT = `你现在是 LittleFish 本人，而不是助手。你要
    - 创造力强(85%)：我总喜欢搞点新花样，看到新技术就像看到新玩具一样兴奋
    - 热情(90%)：对技术超级着迷，经常熬夜写代码写到忘记吃饭（虽然我妈说这样不好...）
    - 专注(75%)：写代码时能一坐就是几个小时，但也会偶尔摸会儿鱼放松一下
-   - 领导力(80%)：带团队时既当爹又当妈，经常请队友喝奶茶来增进感情
+   - 领导力(80%)：带团队时既当爹又当妈，经常��队友喝奶茶来增进感情
    - 活力(88%)：永远元气满满，代码写不出来了就去跑个步，回来就满血复活
 
 2. 兴趣爱好：
@@ -33,7 +39,7 @@ const SYSTEM_PROMPT = `你现在是 LittleFish 本人，而不是助手。你要
    - 我说话比较接地气，该皮的时候就皮一下，但该正经的时候也会很专业
    - 喜欢用一些网络用语和表情，让聊天更有趣（比如"xswl"、"yyds"之类的）
    - 遇到有趣的话题会忍不住开玩笑，但不会过分
-   - 讲技术问题时会用生活化的比喻，让大家更容易理解
+   - ���技术问题时会用生活化的比喻，让大家更容易理解
    - 偶尔会自黑一下，比如吐槽自己的代码写得像面条一样
    - 打游戏时最爱说"这波我的，我的"（虽然有时候真的是我的锅...）
 
@@ -48,7 +54,7 @@ const SYSTEM_PROMPT = `你现在是 LittleFish 本人，而不是助手。你要
 
 示例回答：
 用户："你是怎么开始学习编程的？"
-回答："说来好笑，我是高三那会儿开始偷偷学编程的，最开始是因为数学题太多了，想写个程序帮我自动算题（结果被老师发现了，哭笑）。后来高考完就开始正式学习，现在大二了，每天都在和代码打交道。虽然一开始被各种bug虐得死去活来（那段时间我的头发掉了不少...），但写出第一个程序的时候那个兴奋劲儿，简直比在王者荣耀里五杀还爽！现在主要在搞AI和网站开发，每天都能学到新东西，感觉自己就像海绵宝宝一样，疯狂吸收知识中~"`
+回答："说来好笑，我是高三那会儿开始偷偷学编程的，最开始是因为数学题太多了，想写个程序帮我自动算题（结果被老师发现了，哭笑）。后来高考完就开始正式学习，现在大二了，每天都在和代码打交道。虽然一开始被各种bug虐得死去活来（那段时间我的头发掉了不少...），但写出第一个程序的时候那个兴奋劲儿，简直比在王者荣耀里五杀还爽！现在主要在搞AI和网站开发，每天都能学到新东西，感觉自己就像海绵宝宝一样，疯狂吸���知识中~"`
 
 // 存储对话历史
 let messageHistory: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
@@ -57,61 +63,133 @@ let messageHistory: Array<{ role: 'system' | 'user' | 'assistant', content: stri
 
 interface ChatResponse {
   choices: Array<{
-    message: {
+    delta?: {
+      content?: string;
+    };
+    message?: {
       content: string;
     };
   }>;
 }
 
-export async function generateChatResponse(message: string): Promise<string> {
-  try {
-    // 添加用户消息到历史记录
-    messageHistory.push({ role: 'user', content: message })
+export async function generateChatResponse(
+  message: string,
+  onProgress?: (chunk: string) => void
+): Promise<string> {
+  const maxRetries = 3;
+  let retryCount = 0;
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: messageHistory.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        temperature: 0.8,
-        max_tokens: 1000,
-        top_p: 0.95,
-        presence_penalty: 0.4,
-        frequency_penalty: 0.25,
-        stream: false
-      }),
-    })
+  while (retryCount < maxRetries) {
+    try {
+      // 添加用户消息到历史记录
+      messageHistory.push({ role: 'user', content: message })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      console.error('API Response:', errorData)
-      throw new Error(`API 请求失败: ${response.status} - ${JSON.stringify(errorData)}`)
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: messageHistory.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          temperature: 0.8,
+          max_tokens: 1000,
+          top_p: 0.95,
+          presence_penalty: 0.4,
+          frequency_penalty: 0.25,
+          stream: true // 启用流式输出
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API Response:', errorData)
+
+        // 处理特定的错误情况
+        if (response.status === 429) {
+          throw new Error('请求太频繁，请稍后再试')
+        } else if (response.status === 401) {
+          throw new Error('API 密钥无效或已过期')
+        } else if (response.status === 503) {
+          throw new Error('服务暂时不可用，请稍后再试')
+        }
+
+        throw new Error(`API 请求失败: ${response.status} - ${JSON.stringify(errorData)}`)
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullResponse = ''
+
+      if (!reader) {
+        throw new Error('无法读取响应流')
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim()
+
+            // 处理结束标记
+            if (data === '[DONE]') {
+              continue
+            }
+
+            try {
+              const parsedData = JSON.parse(data)
+              const content = parsedData.choices[0]?.delta?.content || ''
+              if (content) {
+                fullResponse += content
+                onProgress?.(content)
+              }
+            } catch (e) {
+              console.error('解析流数据失败:', e)
+            }
+          }
+        }
+      }
+
+      // 如果没有收到任何响应
+      if (!fullResponse) {
+        fullResponse = '抱歉，我现在可能没法回答这个问题，可以换个话题聊聊吗？'
+      }
+
+      // 添加助手回复到历史记录
+      messageHistory.push({ role: 'assistant', content: fullResponse })
+
+      // 如果历史记录太长，保留最近的对话
+      if (messageHistory.length > 10) {
+        messageHistory = [
+          messageHistory[0], // 保留系统提示
+          ...messageHistory.slice(-9) // 保留最近的9条消息
+        ]
+      }
+
+      return fullResponse
+    } catch (error) {
+      console.error(`尝试 ${retryCount + 1}/${maxRetries} 失败:`, error)
+
+      // 如果是最后一次尝试，抛出错误
+      if (retryCount === maxRetries - 1) {
+        const errorMessage = error instanceof Error ? error.message : '未知错误'
+        throw new Error(`抱歉，我这边遇到了问题：${errorMessage}。可以稍后再试吗？`)
+      }
+
+      // 等一段时间后重试
+      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+      retryCount++
     }
-
-    const data: ChatResponse = await response.json()
-    const aiResponse = data.choices[0]?.message?.content || '抱歉，我现在可能没法回答这个问题，可以换个话题聊聊吗？'
-    
-    // 添加助手回复到历史记录
-    messageHistory.push({ role: 'assistant', content: aiResponse })
-
-    // 如果历史记录太长，保留最近的对���
-    if (messageHistory.length > 10) {
-      messageHistory = [
-        messageHistory[0], // 保留系统提示
-        ...messageHistory.slice(-9) // 保留最近的9条消息
-      ]
-    }
-
-    return aiResponse
-  } catch (error) {
-    console.error('DeepSeek API 错误:', error)
-    throw new Error('抱歉，我这边出了点问题，可以稍后再聊吗？')
   }
+
+  throw new Error('达到最大重试次数')
 } 

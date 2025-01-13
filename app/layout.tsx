@@ -1,19 +1,36 @@
-import type { Metadata } from 'next'
-import { Roboto } from 'next/font/google'
 import './globals.css'
+import { Metadata } from 'next'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
-const roboto = Roboto({
-  weight: ['400', '700'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-roboto',
-})
-
 export const metadata: Metadata = {
   title: 'LittleFish - Personal Website & AI Chat',
-  description: 'Personal website showcasing LittleFish\'s information and featuring an AI chatbot that mimics their chat style.',
+  description: 'LittleFish的个人网站和AI聊天助手',
+  icons: {
+    icon: [
+      {
+        url: '/icons/favicon.ico',
+        sizes: '16x16',
+      },
+      {
+        url: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        url: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+    apple: [
+      {
+        url: '/icons/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+  },
 }
 
 export default function RootLayout({
@@ -22,12 +39,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={roboto.variable}>
-      <body className="min-h-screen flex flex-col">
+    <html lang="zh">
+      <body>
         <Navbar />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          {children}
-        </main>
+        {children}
         <Footer />
       </body>
     </html>

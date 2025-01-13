@@ -1,71 +1,89 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Send } from 'lucide-react'
-import Image from 'next/image'
+import { useState, useEffect, useRef } from 'react'
+import ChatHistory from '../components/chat/ChatHistory'
+import { v4 as uuidv4 } from 'uuid'
 
 interface Message {
-  id: number
-  text: string
-  isUser: boolean
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: string
+  status?: 'sending' | 'sent' | 'error'
+  retryCount?: number
 }
 
-export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      text: "你好啊!我是小鱼炳,很高兴认识你!我平时喜欢研究AI,也喜欢和大家交流分享。有什么想聊的，我们可以一起探讨~",
-      isUser: false,
-    },
-  ])
-  const [input, setInput] = useState('')
+export default function ChatPage() {
+  const userId = 'test-user-id' // TODO: 从状态管理中获取用户ID
+
+  const [message, setMessage] = useState('')
+  const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
   const chatContainerRef = useRef<HTMLDivElement>(null)
 
-  // 自动滚动到最新消息
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  // 加载历史消息
+  const loadHistoryMessages = async () => {
+    if (isLoadingMore || !hasMore) return
+
+    setIsLoadingMore(true)
+    try {
+      const response = await fetch(`/api/chat/history?userId=${userId}&page=${page}&limit=20`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || '加载历史消息失败')
+      }
+
+      if (data.messages.length < 20) {
+        setHasMore(false)
+      }
+
+      setMessages(prev => [...data.messages, ...prev])
+      setPage(prev => prev + 1)
+    } catch (error) {
+      console.error('加载历史消息失败:', error)
+    } finally {
+      setIsLoadingMore(false)
+    }
   }
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  // 自动聚焦输入框
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
-
-  // 调整聊天容器高度
-  useEffect(() => {
-    const adjustHeight = () => {
-      if (chatContainerRef.current) {
-        const windowHeight = window.innerHeight
-        const topOffset = chatContainerRef.current.offsetTop
-        const footerHeight = 80 // 输入框区域高度
-        chatContainerRef.current.style.height = `${windowHeight - topOffset - footerHeight}px`
-      }
+  // 监听滚动加载更多
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop } = e.currentTarget
+    if (scrollTop === 0 && !isLoadingMore && hasMore) {
+      loadHistoryMessages()
     }
+  }
 
-    adjustHeight()
-    window.addEventListener('resize', adjustHeight)
-    return () => window.removeEventListener('resize', adjustHeight)
+  // 初始加载
+  useEffect(() => {
+    loadHistoryMessages()
   }, [])
+
+  // 自动滚动到最新消息
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }, [messages])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!message.trim() || isLoading) return
 
     const userMessage: Message = {
-      id: messages.length + 1,
-      text: input.trim(),
-      isUser: true,
+      id: uuidv4(),
+      role: 'user',
+      content: message.trim(),
+      createdAt: new Date().toISOString(),
+      status: 'sending'
     }
+
     setMessages(prev => [...prev, userMessage])
-    setInput('')
+    setMessage('')
     setIsLoading(true)
 
     try {
@@ -74,147 +92,289 @@ export default function Chat() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({
+          message: userMessage.content,
+          userId
+        }),
       })
 
       if (!response.ok) {
-        throw new Error('获取响应失败')
+        const data = await response.json()
+        throw new Error(data.error || '发送消息失败')
       }
 
-      const data = await response.json()
-      
-      if (data.error) {
-        throw new Error(data.error)
-      }
+      // 更新用户消息状态
+      setMessages(prev => prev.map(msg =>
+        msg.id === userMessage.id
+          ? { ...msg, status: 'sent' }
+          : msg
+      ))
 
+      // 创建AI消息占位
       const aiMessage: Message = {
-        id: messages.length + 2,
-        text: data.text,
-        isUser: false,
+        id: uuidv4(),
+        role: 'assistant',
+        content: '',
+        createdAt: new Date().toISOString(),
+        status: 'sending'
       }
       setMessages(prev => [...prev, aiMessage])
-    } catch (error) {
-      console.error('聊天错误:', error)
-      const errorMessage: Message = {
-        id: messages.length + 2,
-        text: error instanceof Error ? error.message : "抱歉，我无法处理你的消息。请重试。",
-        isUser: false,
+
+      // 读取流式响应
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const text = decoder.decode(value)
+            // 更新AI消息内容
+            setMessages(prev => prev.map(msg =>
+              msg.id === aiMessage.id
+                ? { ...msg, content: msg.content + text }
+                : msg
+            ))
+          }
+
+          // 完成后更新消息状态
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessage.id
+              ? { ...msg, status: 'sent' }
+              : msg
+          ))
+        } catch (error) {
+          console.error('读取响应流时出错:', error)
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessage.id
+              ? { ...msg, status: 'error' }
+              : msg
+          ))
+        } finally {
+          reader.releaseLock()
+        }
       }
-      setMessages(prev => [...prev, errorMessage])
+    } catch (error) {
+      console.error('Chat error:', error)
+      // 更新失败消息状态
+      setMessages(prev => prev.map(msg =>
+        msg.id === userMessage.id
+          ? { ...msg, status: 'error' }
+          : msg
+      ))
     } finally {
       setIsLoading(false)
-      inputRef.current?.focus()
     }
   }
 
-  // 处理按键事件
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit(e)
+  // 处理消息重试
+  const handleRetry = async (messageId: string) => {
+    const targetMessage = messages.find(msg => msg.id === messageId)
+    if (!targetMessage) return
+
+    // 更新重试次数
+    setMessages(prev => prev.map(msg =>
+      msg.id === messageId
+        ? { ...msg, status: 'sending', retryCount: (msg.retryCount || 0) + 1 }
+        : msg
+    ))
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: targetMessage.content,
+          userId
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || '发送消息失败')
+      }
+
+      // 更新消息状态
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, status: 'sent' }
+          : msg
+      ))
+
+      // 读取流式响应
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const text = decoder.decode(value)
+            // 更新AI消息内容
+            setMessages(prev => prev.map(msg =>
+              msg.id === messageId
+                ? { ...msg, content: msg.content + text }
+                : msg
+            ))
+          }
+        } catch (error) {
+          console.error('读取响应流时出错:', error)
+          setMessages(prev => prev.map(msg =>
+            msg.id === messageId
+              ? { ...msg, status: 'error' }
+              : msg
+          ))
+        } finally {
+          reader.releaseLock()
+        }
+      }
+    } catch (error) {
+      console.error('重试失败:', error)
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, status: 'error' }
+          : msg
+      ))
+    }
+  }
+
+  // 处理消息编辑
+  const handleEdit = async (messageId: string, newContent: string) => {
+    // 如果是取消编辑
+    if (!newContent) {
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, isEditing: false }
+          : msg
+      ))
+      return
+    }
+
+    // 如果是开始编辑
+    if (newContent === messages.find(msg => msg.id === messageId)?.content) {
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, isEditing: true }
+          : msg
+      ))
+      return
+    }
+
+    // 如果是保存编辑
+    try {
+      const response = await fetch(`/api/chat/message/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: newContent,
+          userId
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('更新消息失败')
+      }
+
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, content: newContent, isEditing: false }
+          : msg
+      ))
+    } catch (error) {
+      console.error('编辑消息失败:', error)
+      // 保持编辑状态，让用户可以重试
+    }
+  }
+
+  // 处理消息删除
+  const handleDelete = async (messageId: string) => {
+    if (!confirm('确定要删除这条消息吗？')) return
+
+    try {
+      const response = await fetch(`/api/chat/message/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      })
+
+      if (!response.ok) {
+        throw new Error('删除消息失败')
+      }
+
+      setMessages(prev => prev.filter(msg => msg.id !== messageId))
+    } catch (error) {
+      console.error('删除消息失败:', error)
+      alert('删除消息失败，请重试')
     }
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* 聊天头部 */}
-      <div className="bg-white border-b border-[var(--border-color)] p-4 fixed top-[60px] left-0 right-0 z-10">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex items-center space-x-3">
-            <Image
-              src="/images/mascot.png"
-              alt="小鱼炳头像"
-              width={40}
-              height={40}
-              className="rounded-full"
-            />
-            <div>
-              <h1 className="text-xl font-bold text-[var(--text-primary)]">与LittleFish对话</h1>
-              <p className="text-sm text-[var(--text-secondary)] mt-1">
-                让我们开始愉快的交谈吧！
-              </p>
-            </div>
+    <div className="min-h-screen pt-[60px] bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* 聊天头部 */}
+          <div className="p-4 border-b bg-gray-50">
+            <h2 className="text-lg font-semibold text-gray-800">与 LittleFish 对话</h2>
+            <p className="text-sm text-gray-600">让我们开始愉快的交谈吧！</p>
           </div>
-        </div>
-      </div>
 
-      {/* 聊天内容区域 */}
-      <div 
-        ref={chatContainerRef}
-        className="flex-grow overflow-y-auto pt-[140px] pb-[80px] px-4"
-      >
-        <div className="container mx-auto max-w-4xl space-y-4">
-          {messages.map(message => (
-            <div
-              key={message.id}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fade-in items-end space-x-2`}
-            >
-              {!message.isUser && (
-                <Image
-                  src="/images/mascot.png"
-                  alt="AI 助手"
-                  width={24}
-                  height={24}
-                  className="rounded-full mb-2"
-                />
-              )}
-              <div
-                className={`chat-bubble ${
-                  message.isUser ? 'chat-bubble-user' : 'chat-bubble-ai'
-                } max-w-[85%] sm:max-w-[70%]`}
-              >
-                {message.text}
+          {/* 聊天历史 */}
+          <div
+            ref={chatContainerRef}
+            className="h-[600px] overflow-y-auto p-6 scroll-smooth"
+            onScroll={handleScroll}
+          >
+            {isLoadingMore && (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
               </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start animate-fade-in items-end space-x-2">
-              <Image
-                src="/images/mascot.png"
-                alt="AI 助手"
-                width={24}
-                height={24}
-                className="rounded-full mb-2"
+            )}
+            <ChatHistory
+              messages={messages}
+              onRetry={handleRetry}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </div>
+
+          {/* 输入框 */}
+          <div className="border-t p-4 bg-white">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="输入消息..."
+                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
               />
-              <div className="chat-bubble chat-bubble-ai">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce delay-100" />
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce delay-200" />
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* 输入区域 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[var(--border-color)] p-4">
-        <form 
-          onSubmit={handleSubmit}
-          className="container mx-auto max-w-4xl"
-        >
-          <div className="flex items-center gap-4">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="输入你的消息..."
-              className="flex-grow bg-[var(--input-background)] rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              className="btn-primary p-3 rounded-lg flex items-center justify-center disabled:opacity-50 transition-opacity duration-200 min-w-[48px]"
-              disabled={!input.trim() || isLoading}
-            >
-              <Send className="w-5 h-5" />
-            </button>
+              <button
+                type="submit"
+                className={`
+                  px-6 py-2 rounded-lg text-white font-medium
+                  ${isLoading
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                  }
+                  transition-colors
+                `}
+                disabled={isLoading}
+              >
+                {isLoading ? '发送中...' : '发送'}
+              </button>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
