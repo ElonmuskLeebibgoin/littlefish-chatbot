@@ -89,6 +89,15 @@ export default function Navbar() {
       hoverColor: 'hover:text-pink-500',
       borderColor: 'border-pink-500'
     },
+    {
+      href: '/ai-world',
+      text: 'AI 世界',
+      color: 'indigo',
+      hoverBg: 'hover:bg-indigo-50',
+      activeColor: 'text-indigo-600',
+      hoverColor: 'hover:text-indigo-500',
+      borderColor: 'border-indigo-500'
+    },
   ]
 
   return (

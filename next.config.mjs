@@ -9,7 +9,7 @@ const nextConfig = {
   },
   // 添加Vercel特定配置
   serverRuntimeConfig: {
-    PROJECT_ROOT: __dirname,
+    projectRoot: process.cwd(),
   },
   // 公共运行时配置
   publicRuntimeConfig: {
